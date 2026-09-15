@@ -1,12 +1,41 @@
 // ---- Test Drive Console prototype: app state + rendering ----
 
-const STATE = { role: "RECEPTIONIST", orderId: null, stepIndex: 0, compareIds: [], payMethod: "qr", queueFilter: "primary" };
+const STATE = { role: "RECEPTIONIST", orderId: null, stepIndex: 0, compareIds: [], payMethod: "qr", queueFilter: "primary", queuePage: 1, oversightPage: 1 };
+const PAGE_SIZE = 5;
 
 const ROLE_META = {
-  RECEPTIONIST: { name: "Nand Kishor", init: "NK", sub: "RECEPTIONIST", icon: "user" },
+  RECEPTIONIST: { name: "Kishor", init: "K", sub: "RECEPTIONIST", icon: "user" },
   DA: { name: "Omar Hassan", init: "OH", sub: "COMMON_DA", icon: "car-front" },
   MANAGER: { name: "Aaliya Patel", init: "AP", sub: "DATL &middot; Manager", icon: "shield-check" },
 };
+
+// ================================================================== pagination
+
+function paginate(rows, page, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const clamped = Math.min(Math.max(1, page), totalPages);
+  const start = (clamped - 1) * pageSize;
+  return { pageRows: rows.slice(start, start + pageSize), totalPages, page: clamped };
+}
+
+function pagerHtml(page, totalPages) {
+  if (totalPages <= 1) return "";
+  let btns = `<button data-pg="prev" ${page === 1 ? "disabled" : ""}><i data-lucide="chevron-left" class="icon"></i></button>`;
+  for (let i = 1; i <= totalPages; i++) btns += `<button class="${i === page ? "cur" : ""}" data-pg="${i}">${i}</button>`;
+  btns += `<button data-pg="next" ${page === totalPages ? "disabled" : ""}><i data-lucide="chevron-right" class="icon"></i></button>`;
+  return `<div class="pager">${btns}</div>`;
+}
+
+function wirePager(container, page, totalPages, onChange) {
+  const pager = container.querySelector(".pager");
+  if (!pager) return;
+  pager.querySelectorAll("[data-pg]").forEach(btn => btn.addEventListener("click", () => {
+    if (btn.disabled) return;
+    const v = btn.dataset.pg;
+    const next = v === "prev" ? page - 1 : v === "next" ? page + 1 : Number(v);
+    onChange(next);
+  }));
+}
 
 function icons() { if (window.lucide) lucide.createIcons(); }
 
@@ -102,6 +131,8 @@ function renderRoleSwitch() {
     STATE.role = b.dataset.role;
     STATE.stepIndex = 0;
     STATE.queueFilter = "primary";
+    STATE.queuePage = 1;
+    STATE.oversightPage = 1;
     document.getElementById("role-dropdown").classList.remove("open");
     renderRoute();
   }));
@@ -150,18 +181,20 @@ function renderQueue() {
       <span class="vt ${STATE.queueFilter === "virtual" ? "active" : ""}" data-f="virtual">Virtual &middot; ${counts.virtual}</span>
       <span class="vt ${STATE.queueFilter === "home" ? "active" : ""}" data-f="home">Home &middot; ${counts.home}</span>
     </div>
-    <div class="dtable">
+    <div class="dtable" id="queue-dtable">
       <table>
         <thead><tr><th>Customer</th><th>Order</th><th>Car</th><th>Type</th><th>Status</th><th></th></tr></thead>
         <tbody id="queue-rows"></tbody>
       </table>
-      <div class="pager"><button><i data-lucide="chevron-left" class="icon"></i></button><button class="cur">1</button><button>2</button><button><i data-lucide="chevron-right" class="icon"></i></button></div>
     </div>`;
 
-  document.querySelectorAll("#queue-viewtabs .vt").forEach(vt => vt.addEventListener("click", () => { STATE.queueFilter = vt.dataset.f; renderQueue(); icons(); }));
+  document.querySelectorAll("#queue-viewtabs .vt").forEach(vt => vt.addEventListener("click", () => { STATE.queueFilter = vt.dataset.f; STATE.queuePage = 1; renderQueue(); }));
 
-  const rows = rowsForFilter(STATE.queueFilter);
-  document.getElementById("queue-rows").innerHTML = rows.map(o => `
+  const allRows = rowsForFilter(STATE.queueFilter);
+  const { pageRows, totalPages, page } = paginate(allRows, STATE.queuePage, PAGE_SIZE);
+  STATE.queuePage = page;
+
+  document.getElementById("queue-rows").innerHTML = pageRows.map(o => `
     <tr data-order="${o.id}">
       <td><div class="cust"><div class="av">${initials(o.customer.name || "New")}</div><div><div class="nm">${o.customer.name || "New walk-in"}</div><div class="ph">${o.customer.phone || "&mdash;"}</div></div></div></td>
       <td>${o.id}</td>
@@ -174,6 +207,10 @@ function renderQueue() {
   document.querySelectorAll("#queue-rows tr[data-order]").forEach(tr => {
     tr.addEventListener("click", (e) => { if (e.target.closest(".kebab")) return; navigate("detail", tr.dataset.order); });
   });
+
+  const dtable = document.getElementById("queue-dtable");
+  dtable.insertAdjacentHTML("beforeend", pagerHtml(page, totalPages));
+  wirePager(dtable, page, totalPages, (next) => { STATE.queuePage = next; renderQueue(); });
 
   const checkinBtn = document.getElementById("btn-checkin-walkin");
   if (checkinBtn) checkinBtn.addEventListener("click", () => navigate("detail", createDraftOrder().id));
@@ -194,15 +231,17 @@ function renderOversight() {
       <div class="select" style="border-color:var(--lv); color:var(--lv);">Test Drive Scheduling <i data-lucide="chevron-down" class="icon"></i></div>
     </div>
     <div class="viewtabs"><span class="vt active">Order</span><span class="vt">Lead</span><span class="vt">Contact</span></div>
-    <div class="dtable">
+    <div class="dtable" id="oversight-dtable">
       <table>
         <thead><tr><th>Order Id</th><th>Customer</th><th>Car</th><th>Type</th><th>Scheduled slot</th><th>Assigned DA</th><th>Status</th><th></th></tr></thead>
         <tbody id="oversight-rows"></tbody>
       </table>
-      <div class="pager"><button><i data-lucide="chevron-left" class="icon"></i></button><button class="cur">1</button><button>2</button><button><i data-lucide="chevron-right" class="icon"></i></button></div>
     </div>`;
 
-  document.getElementById("oversight-rows").innerHTML = ORDERS.map(o => {
+  const { pageRows, totalPages, page } = paginate(ORDERS, STATE.oversightPage, PAGE_SIZE);
+  STATE.oversightPage = page;
+
+  document.getElementById("oversight-rows").innerHTML = pageRows.map(o => {
     const da = o.assignedDaId ? findDa(o.assignedDaId) : null;
     return `
     <tr data-order="${o.id}">
@@ -220,6 +259,10 @@ function renderOversight() {
   document.querySelectorAll("#oversight-rows tr[data-order]").forEach(tr => {
     tr.addEventListener("click", (e) => { if (e.target.closest(".kebab")) return; navigate("detail", tr.dataset.order); });
   });
+
+  const dtable = document.getElementById("oversight-dtable");
+  dtable.insertAdjacentHTML("beforeend", pagerHtml(page, totalPages));
+  wirePager(dtable, page, totalPages, (next) => { STATE.oversightPage = next; renderOversight(); });
 
   icons();
 }

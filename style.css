@@ -38,8 +38,8 @@ button{font-family:inherit; cursor:pointer;}
 .icon{width:16px; height:16px; flex:none; stroke-width:2;}
 
 /* ===== frame ===== */
-.frame-wrap{max-width:1440px; margin:32px auto 40px; padding:0 28px;}
-.frame{display:flex; border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-md); height:780px; background:var(--surface);}
+.frame-wrap{margin:0; padding:0;}
+.frame{display:flex; border:none; border-radius:0; overflow:hidden; box-shadow:none; height:100vh; background:var(--surface);}
 
 /* route panels: one shared sidebar+header, swappable body content */
 .route-panel{display:none; min-width:0;}
@@ -140,6 +140,8 @@ button{font-family:inherit; cursor:pointer;}
 .pager{display:flex; align-items:center; justify-content:center; gap:6px; padding:12px; border-top:1px solid var(--border);}
 .pager button{width:28px; height:28px; border-radius:7px; border:1px solid var(--border); background:var(--surface); font-size:12px; color:var(--muted);}
 .pager button.cur{background:var(--lv); color:#fff; border-color:var(--lv); font-weight:700;}
+.pager button:hover:not(.cur):not(:disabled){background:var(--surface-2); color:var(--ink);}
+.pager button:disabled{opacity:.4; cursor:not-allowed;}
 
 /* ===== detail/journey screen ===== */
 .detail-cols{display:flex; height:100%; width:100%;}
