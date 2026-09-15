@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Drive Console &mdash; Leadverse prototype</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.462.0/dist/umd/lucide.js"></script>
+</head>
+<body>
+
+<div class="meta">
+  <div class="meta-title">
+    <h1>Test Drive Console</h1>
+    <span class="meta-tag">Clickable prototype</span>
+  </div>
+  <p>How DAP's Receptionist/DA journey plugs into Leadverse as it exists today &mdash; same sidebar, same task/journey engine, same table and modal patterns already live in production. Every color, radius, and component shape below is pulled from <code>c24-lead-verse-ui</code>'s actual code.</p>
+  <div class="meta-controls">
+    <div class="tabbar" id="tabbar">
+      <button class="active" data-tab="queue"><i data-lucide="car-front" class="icon"></i>Test Drives</button>
+      <button data-tab="detail"><i data-lucide="milestone" class="icon"></i>Test Drive Detail</button>
+      <button data-tab="oversight"><i data-lucide="layout-grid" class="icon"></i>Manager Oversight</button>
+      <button data-tab="plan"><i data-lucide="map" class="icon"></i>Migration Plan</button>
+    </div>
+    <div class="role-toggle">
+      Acting as
+      <div class="seg" id="role-toggle">
+        <button class="active" data-role="RECEPTIONIST">Receptionist</button>
+        <button data-role="DA">Delivery Associate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="frame-wrap">
+  <div class="frame">
+
+    <!-- ============ Test Drives queue ============ -->
+    <div class="panel active" id="panel-queue">
+      <aside class="lv-sidebar">
+        <div class="lv-brand"><span class="mark"><i data-lucide="refresh-cw" class="icon"></i></span><b>Leadverse</b></div>
+        <nav class="lv-nav">
+          <a href="#"><i data-lucide="package" class="icon"></i>Tasks</a>
+          <a href="#"><i data-lucide="grid-2x2" class="icon"></i>Leads</a>
+          <a class="active" href="#"><i data-lucide="car-front" class="icon"></i>Test Drives<span class="new-badge">NEW</span></a>
+        </nav>
+        <div class="lv-sidebar-foot"><a href="#"><i data-lucide="settings" class="icon"></i>Settings</a></div>
+      </aside>
+      <div class="lv-main">
+        <div class="lv-header">
+          <div class="crumb">Leadverse / <b>Test Drives</b></div>
+          <div class="lv-user" id="header-user"></div>
+        </div>
+        <div class="lv-body" id="queue-body"></div>
+      </div>
+    </div>
+
+    <!-- ============ Test Drive detail &mdash; journey stepper ============ -->
+    <div class="panel" id="panel-detail" style="position:relative;">
+      <aside class="lv-sidebar">
+        <div class="lv-brand"><span class="mark"><i data-lucide="refresh-cw" class="icon"></i></span><b>Leadverse</b></div>
+        <nav class="lv-nav">
+          <a href="#"><i data-lucide="package" class="icon"></i>Tasks</a>
+          <a href="#"><i data-lucide="grid-2x2" class="icon"></i>Leads</a>
+          <a class="active" href="#"><i data-lucide="car-front" class="icon"></i>Test Drives<span class="new-badge">NEW</span></a>
+        </nav>
+        <div class="lv-sidebar-foot"><a href="#"><i data-lucide="settings" class="icon"></i>Settings</a></div>
+      </aside>
+      <div class="lv-main">
+        <div class="lv-header">
+          <div class="crumb">Leadverse / Test Drives / <b id="detail-crumb">&mdash;</b></div>
+          <div class="lv-user" id="header-user-2"></div>
+        </div>
+        <div style="flex:1; display:flex; min-height:0;">
+          <div class="leftpane" id="leftpane"></div>
+          <div class="journey-main">
+            <div class="stepper" id="stepper"></div>
+            <div class="journey-body" id="journey-body"></div>
+            <div class="bottombar" id="bottombar"></div>
+          </div>
+          <div class="cargpt">
+            <div class="badge"><i data-lucide="sparkles" class="icon"></i></div>
+            <b>CarGPT</b>
+            <p>Coming soon &mdash; today this panel is a placeholder in Leadverse itself, wired for later.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assign DA modal -->
+      <div class="modal-overlay" id="assign-modal">
+        <div class="modal">
+          <div class="modal-head"><h4>Reassign DA</h4><button id="modal-close"><i data-lucide="x" class="icon"></i></button></div>
+          <div class="modal-sub">Ranked by hub availability &amp; today's capacity &middot; reuses Leadverse's existing <code style="font-size:11px;">ManualAssignmentModal</code></div>
+          <div class="da-list" id="da-list"></div>
+          <div class="modal-foot"><button class="btn" id="modal-cancel">Cancel</button><button class="btn primary" id="modal-assign">Assign</button></div>
+        </div>
+      </div>
+
+      <!-- Car comparison modal -->
+      <div class="cmp-overlay" id="cmp-modal">
+        <div class="cmp-modal">
+          <div class="modal-head"><h4>Compare cars</h4><button id="cmp-close"><i data-lucide="x" class="icon"></i></button></div>
+          <div style="overflow-y:auto;"><table id="cmp-table"></table></div>
+          <div class="modal-foot"><button class="btn" id="cmp-close-2">Close</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Manager oversight ============ -->
+    <div class="panel" id="panel-oversight">
+      <aside class="lv-sidebar">
+        <div class="lv-brand"><span class="mark"><i data-lucide="refresh-cw" class="icon"></i></span><b>Leadverse</b></div>
+        <nav class="lv-nav">
+          <a class="active" href="#"><i data-lucide="package" class="icon"></i>Tasks</a>
+          <a href="#"><i data-lucide="grid-2x2" class="icon"></i>Leads</a>
+          <a href="#"><i data-lucide="car-front" class="icon"></i>Test Drives<span class="new-badge">NEW</span></a>
+        </nav>
+        <div class="lv-sidebar-foot"><a href="#"><i data-lucide="settings" class="icon"></i>Settings</a></div>
+      </aside>
+      <div class="lv-main">
+        <div class="lv-header">
+          <div class="crumb">Leadverse / <b>Tasks (612)</b></div>
+          <div class="lv-user" id="header-user-3"></div>
+        </div>
+        <div class="lv-body" id="oversight-body"></div>
+      </div>
+    </div>
+
+    <!-- ============ Migration plan ============ -->
+    <div class="panel" id="panel-plan">
+      <div class="lv-body plan" style="padding:32px 40px; overflow-y:auto; width:100%;">
+        <h3 style="margin-top:0;">The core move</h3>
+        <p>Leadverse already models work as <code>Tasks &rarr; entity type (Order/Lead/Contact) &rarr; persona</code>, each persona a workflow with a slug shaped <code>{bu}-{entity}-{action}-by-{actor}</code> (confirmed live: <code>b2c-order-cancellation-by-rm</code>). Its current Order personas &mdash; Cancellation, Delivery Schedule, Delivery, FinOps, Qc, Registration, RM, VAS Refurb &mdash; cover every post-booking stage <b>except</b> the test drive itself.</p>
+
+        <div class="reuse-grid">
+          <div class="reuse-card"><span class="tag reuse">Reuse as-is</span><h4>Assign DA</h4><p>Leadverse's <code>ManualAssignmentModal</code> + <code>assign-direct</code> endpoint already does "pick a candidate, ranked, from a modal." Add a per-DA daily-capacity check and point it at DA candidates.</p></div>
+          <div class="reuse-card"><span class="tag extend">Extend</span><h4>DA shift status</h4><p>The header's online/offline <code>AssignmentStatusToggle</code> is one flag away from DAP's five-state <code>CHECK_IN/AVAILABLE/ON_BREAK/DA_RM_WORK/CHECK_OUT</code>.</p></div>
+          <div class="reuse-card"><span class="tag reuse">Reuse as-is</span><h4>Oversight tables</h4><p>Cx Hub View, DA List, Car Level View are new personas/columns on the existing Tasks table &mdash; no new component.</p></div>
+          <div class="reuse-card"><span class="tag new">Net new</span><h4>Walk-in intake + car selection</h4><p>Customer capture, car listing/compare, and order creation for a walk-in with no pre-existing booking &mdash; a genuinely new stepper flow, distinct from checking in a customer who already booked online.</p></div>
+          <div class="reuse-card"><span class="tag new">Net new</span><h4>VAS + payment collection</h4><p>DA presents VAS, confirms selection, then generates a QR/bank-transfer payment request in-app &mdash; a new in-person collection flow, not just a read-only token-paid reflection.</p></div>
+          <div class="reuse-card"><span class="tag extend">Extend</span><h4>Left-pane contract</h4><p>The header/tabs/sections JSON contract already covers avatar, status badge, call/WhatsApp/SMS actions &mdash; needs Booking/Test-Drive tabs added to its vocabulary.</p></div>
+        </div>
+
+        <h3>Two receptionist flows, one screen</h3>
+        <p>An existing/pre-booked customer only needs Check-in &rarr; Assign DA. A walk-in with no booking needs the full intake first: Customer Details &rarr; Select Car (with compare) &rarr; Order Created &rarr; Check-in &rarr; Assign DA. Both live on the same Test Drive Detail screen &mdash; the stepper configuration is chosen dynamically by whether the order already exists.</p>
+
+        <h3>Still open</h3>
+        <p>Leadverse has no role system today comparable to DAP's eight roles &mdash; gating is "authenticated + tenant chosen" plus a few hardcoded persona checks. DAP backend's own <code>user-role-mapping.yml</code> is the closest working model to port. Whether Hub/Virtual/Home stay three distinct workflow families or get unified is still an open product decision.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
