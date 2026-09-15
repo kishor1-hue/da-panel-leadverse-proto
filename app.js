@@ -1,36 +1,154 @@
 // ---- Test Drive Console prototype: app state + rendering ----
 
-const STATE = { role: "RECEPTIONIST", tab: "queue", orderId: null, stepIndex: 0, compareIds: [], payMethod: "qr" };
+const STATE = { role: "RECEPTIONIST", orderId: null, stepIndex: 0, compareIds: [], payMethod: "qr", queueFilter: "primary" };
+
+const ROLE_META = {
+  RECEPTIONIST: { name: "Nand Kishor", init: "NK", sub: "RECEPTIONIST", icon: "user" },
+  DA: { name: "Omar Hassan", init: "OH", sub: "COMMON_DA", icon: "car-front" },
+  MANAGER: { name: "Aaliya Patel", init: "AP", sub: "DATL &middot; Manager", icon: "shield-check" },
+};
 
 function icons() { if (window.lucide) lucide.createIcons(); }
 
-// ---------------------------------------------------------------- header user
+// ================================================================== router
 
-function renderHeaderUser(el) {
-  const isDa = STATE.role === "DA";
-  el.innerHTML = `
-    <div class="who"><b>${isDa ? "Omar Hassan" : "Nand Kishor"}</b><span>${isDa ? "COMMON_DA &middot; Al Quoz hub" : "RECEPTIONIST &middot; Al Quoz hub"}</span></div>
-    <div class="avatar">${isDa ? "OH" : "NK"}<span class="dot"></span></div>`;
+function parseHash() {
+  const h = (location.hash || "#/queue").replace(/^#\/?/, "");
+  const [path, param] = h.split("/");
+  return { path: path || "queue", param: param || null };
+}
+let ROUTE = parseHash();
+
+function navigate(path, param) {
+  location.hash = param ? `/${path}/${param}` : `/${path}`;
 }
 
-// ---------------------------------------------------------------- Test Drives queue
+function renderRoute() {
+  // guard: Manager Oversight is manager-only
+  if (ROUTE.path === "oversight" && STATE.role !== "MANAGER") { navigate("queue"); return; }
+  // detail always needs an order id in the url — redirect to attach one if missing
+  if (ROUTE.path === "detail") {
+    if (!ROUTE.param) {
+      const fallback = STATE.orderId || (ORDERS[0] && ORDERS[0].id);
+      if (fallback) { navigate("detail", fallback); return; }
+    } else {
+      STATE.orderId = ROUTE.param;
+    }
+  }
+
+  document.querySelectorAll(".route-panel").forEach(p => p.classList.toggle("active", p.id === "route-" + ROUTE.path));
+  renderSidebar();
+  renderHeader();
+
+  if (ROUTE.path === "queue") renderQueue();
+  if (ROUTE.path === "detail") renderDetail();
+  if (ROUTE.path === "oversight") renderOversight();
+  // "plan" route is static markup already in index.html — nothing to render
+  icons();
+}
+
+window.addEventListener("hashchange", () => { ROUTE = parseHash(); renderRoute(); });
+
+// ================================================================== shared chrome: sidebar + header
+
+function renderSidebar() {
+  const el = document.getElementById("app-sidebar");
+  const r = ROUTE.path;
+  const showOversight = STATE.role === "MANAGER";
+  el.innerHTML = `
+    <div class="lv-brand"><span class="mark"><i data-lucide="refresh-cw" class="icon"></i></span><b>Leadverse</b></div>
+    <nav class="lv-nav">
+      <a href="#"><i data-lucide="package" class="icon"></i>Tasks</a>
+      <a href="#"><i data-lucide="grid-2x2" class="icon"></i>Leads</a>
+      <a class="${r === "queue" || r === "detail" ? "active" : ""}" data-nav="queue"><i data-lucide="car-front" class="icon"></i>Test Drives<span class="new-badge">NEW</span></a>
+      ${showOversight ? `<a class="${r === "oversight" ? "active" : ""}" data-nav="oversight"><i data-lucide="layout-grid" class="icon"></i>Manager Oversight</a>` : ""}
+    </nav>
+    <div class="lv-nav-group">Prototype notes</div>
+    <nav class="lv-nav">
+      <a class="${r === "plan" ? "active" : ""}" data-nav="plan"><i data-lucide="map" class="icon"></i>Migration Plan</a>
+    </nav>
+    <div class="lv-sidebar-foot"><a href="#"><i data-lucide="settings" class="icon"></i>Settings</a></div>`;
+  el.querySelectorAll("[data-nav]").forEach(a => a.addEventListener("click", (e) => { e.preventDefault(); navigate(a.dataset.nav); }));
+}
+
+function renderHeader() {
+  const crumbEl = document.getElementById("app-crumb");
+  const r = ROUTE.path;
+  if (r === "queue") crumbEl.innerHTML = `Leadverse / <b>Test Drives</b>`;
+  else if (r === "detail") {
+    const order = findOrder(STATE.orderId);
+    crumbEl.innerHTML = `Leadverse / <a data-nav="queue">Test Drives</a> / <b>${order ? (order.customer.name || "New walk-in") : "&mdash;"}</b>`;
+  } else if (r === "oversight") crumbEl.innerHTML = `Leadverse / <b>Tasks (612)</b> <span style="color:var(--faint); font-weight:400;">&middot; Test Drive Scheduling</span>`;
+  else if (r === "plan") crumbEl.innerHTML = `Leadverse / <b>Migration Plan</b>`;
+  const a = crumbEl.querySelector("[data-nav]");
+  if (a) a.addEventListener("click", (e) => { e.preventDefault(); navigate(a.dataset.nav); });
+
+  renderRoleSwitch();
+}
+
+function renderRoleSwitch() {
+  const rm = ROLE_META[STATE.role];
+  document.getElementById("role-trigger").innerHTML = `
+    <div class="who"><b>${rm.name}</b><span>${rm.sub} &middot; Al Quoz hub</span></div>
+    <div class="avatar">${rm.init}<span class="dot"></span></div>
+    <i data-lucide="chevron-down" class="icon" style="width:13px;height:13px;color:var(--faint);"></i>`;
+  document.getElementById("role-dropdown").innerHTML = `
+    <div class="lbl-hint">Acting as</div>
+    ${Object.keys(ROLE_META).map(key => {
+      const m = ROLE_META[key];
+      return `<button class="opt ${STATE.role === key ? "active" : ""}" data-role="${key}"><i data-lucide="${m.icon}" class="icon"></i><span>${m.name}<span class="sub">${m.sub}</span></span></button>`;
+    }).join("")}`;
+  document.querySelectorAll("#role-dropdown [data-role]").forEach(b => b.addEventListener("click", () => {
+    STATE.role = b.dataset.role;
+    STATE.stepIndex = 0;
+    STATE.queueFilter = "primary";
+    document.getElementById("role-dropdown").classList.remove("open");
+    renderRoute();
+  }));
+}
+document.getElementById("role-trigger").addEventListener("click", (e) => { e.stopPropagation(); document.getElementById("role-dropdown").classList.toggle("open"); });
+document.addEventListener("click", () => document.getElementById("role-dropdown").classList.remove("open"));
+
+// ================================================================== Test Drives queue
+
+function primaryLabel() { return STATE.role === "DA" ? "My Queue" : STATE.role === "MANAGER" ? "All" : "Today"; }
+
+function rowsForFilter(filter) {
+  let rows = ORDERS;
+  if (filter === "hub") return rows.filter(o => o.type === "Hub");
+  if (filter === "virtual") return rows.filter(o => o.type === "Virtual");
+  if (filter === "home") return rows.filter(o => o.type === "Home");
+  // primary
+  if (STATE.role === "DA") return rows.filter(o => o.assignedDaId === "da1");
+  return rows;
+}
 
 function renderQueue() {
   const isDa = STATE.role === "DA";
-  const rows = isDa
-    ? ORDERS.filter(o => o.assignedDaId === "da1" && !o.isWalkIn)
-    : ORDERS;
-  const body = document.getElementById("queue-body");
+  const isManager = STATE.role === "MANAGER";
+  const body = document.getElementById("route-queue");
+  const counts = {
+    primary: rowsForFilter("primary").length,
+    hub: rowsForFilter("hub").length,
+    virtual: rowsForFilter("virtual").length,
+    home: rowsForFilter("home").length,
+  };
   body.innerHTML = `
-    ${isDa ? "" : `<div class="proto-note"><i data-lucide="sparkles" class="icon"></i><div><b>New top-level nav item.</b> Today only "Tasks" and "Leads" are wired into the sidebar &mdash; this is a third, for the DA's own fast-moving queue and the Receptionist's front-desk intake.</div></div>`}
+    ${isDa || isManager ? "" : `<div class="proto-note"><i data-lucide="sparkles" class="icon"></i><div><b>New top-level nav item.</b> Today only "Tasks" and "Leads" are wired into the sidebar &mdash; this is a third, for the DA's own fast-moving queue and the Receptionist's front-desk intake.</div></div>`}
     <div class="list-head">
-      <div><h2>Test Drives</h2><div class="sub">${isDa ? "Your assigned test drives at Al Quoz" : "Today's bookings and walk-ins at Al Quoz"}</div></div>
+      <div><h2>Test Drives</h2><div class="sub">${isDa ? "Your assigned test drives at Al Quoz" : isManager ? "Every test drive across Al Quoz" : "Today's bookings and walk-ins at Al Quoz"}</div></div>
       ${isDa ? "" : `<button class="btn primary" id="btn-checkin-walkin"><i data-lucide="user-plus" class="icon"></i>Check In Customer</button>`}
     </div>
     <div class="toolbar">
       <div class="search"><i data-lucide="search" class="icon"></i><input placeholder="Search by customer, order id, phone&hellip;"></div>
       <div class="select"><i data-lucide="filter" class="icon"></i>Filters</div>
       <div class="select">Today <i data-lucide="chevron-down" class="icon"></i></div>
+    </div>
+    <div class="viewtabs" id="queue-viewtabs">
+      <span class="vt ${STATE.queueFilter === "primary" ? "active" : ""}" data-f="primary">${primaryLabel()} &middot; ${counts.primary}</span>
+      <span class="vt ${STATE.queueFilter === "hub" ? "active" : ""}" data-f="hub">Hub &middot; ${counts.hub}</span>
+      <span class="vt ${STATE.queueFilter === "virtual" ? "active" : ""}" data-f="virtual">Virtual &middot; ${counts.virtual}</span>
+      <span class="vt ${STATE.queueFilter === "home" ? "active" : ""}" data-f="home">Home &middot; ${counts.home}</span>
     </div>
     <div class="dtable">
       <table>
@@ -40,6 +158,9 @@ function renderQueue() {
       <div class="pager"><button><i data-lucide="chevron-left" class="icon"></i></button><button class="cur">1</button><button>2</button><button><i data-lucide="chevron-right" class="icon"></i></button></div>
     </div>`;
 
+  document.querySelectorAll("#queue-viewtabs .vt").forEach(vt => vt.addEventListener("click", () => { STATE.queueFilter = vt.dataset.f; renderQueue(); icons(); }));
+
+  const rows = rowsForFilter(STATE.queueFilter);
   document.getElementById("queue-rows").innerHTML = rows.map(o => `
     <tr data-order="${o.id}">
       <td><div class="cust"><div class="av">${initials(o.customer.name || "New")}</div><div><div class="nm">${o.customer.name || "New walk-in"}</div><div class="ph">${o.customer.phone || "&mdash;"}</div></div></div></td>
@@ -48,36 +169,24 @@ function renderQueue() {
       <td><span class="chip neutral">${o.type}</span></td>
       <td><span class="chip ${o.tone}">${o.status}</span></td>
       <td><button class="kebab"><i data-lucide="more-vertical" class="icon"></i></button></td>
-    </tr>`).join("") || `<tr><td colspan="6" style="text-align:center; color:var(--faint); padding:30px;">No test drives yet.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="6" style="text-align:center; color:var(--faint); padding:30px;">No test drives in "${STATE.queueFilter === "primary" ? primaryLabel() : STATE.queueFilter}" right now.</td></tr>`;
 
   document.querySelectorAll("#queue-rows tr[data-order]").forEach(tr => {
-    tr.addEventListener("click", (e) => { if (e.target.closest(".kebab")) return; openOrder(tr.dataset.order); });
+    tr.addEventListener("click", (e) => { if (e.target.closest(".kebab")) return; navigate("detail", tr.dataset.order); });
   });
 
   const checkinBtn = document.getElementById("btn-checkin-walkin");
-  if (checkinBtn) checkinBtn.addEventListener("click", () => {
-    const order = createDraftOrder();
-    openOrder(order.id);
-  });
+  if (checkinBtn) checkinBtn.addEventListener("click", () => navigate("detail", createDraftOrder().id));
 
   icons();
 }
 
-// ---------------------------------------------------------------- Manager oversight (static-ish, own dataset)
-
-const OVERSIGHT_ROWS = [
-  { order: "BK-88213", name: "Fatima Al Suwaidi", car: "Nissan Altima '23", type: "Hub", da: "Omar Hassan", slot: "Today, 2:30 PM", status: "Conduct TD", tone: "warn" },
-  { order: "BK-88190", name: "Khalid Al Jaberi", car: "Toyota Camry '22", type: "Virtual", da: "&mdash;", slot: "Today, 3:00 PM", status: "Unassigned", tone: "bad" },
-  { order: "BK-88177", name: "Maryam Rashidi", car: "Hyundai Tucson '23", type: "Hub", da: "Layla Ahmed", slot: "Today, 4:15 PM", status: "Assigned", tone: "neutral" },
-  { order: "BK-88155", name: "Sultan Al Nuaimi", car: "Kia Sportage '22", type: "Home", da: "Yusuf Khan", slot: "Tomorrow, 11:00 AM", status: "Left Yard", tone: "warn" },
-  { order: "BK-88141", name: "Aisha Al Mazrouei", car: "Nissan Sunny '21", type: "Hub", da: "Sara Ibrahim", slot: "Yesterday", status: "Complete", tone: "ok" },
-  { order: "BK-88129", name: "Rashid Al Falasi", car: "Honda CR-V '23", type: "Virtual", da: "Omar Hassan", slot: "Yesterday", status: "Cancelled", tone: "bad" },
-];
+// ================================================================== Manager oversight — same ORDERS, oversight columns
 
 function renderOversight() {
-  const body = document.getElementById("oversight-body");
+  const body = document.getElementById("route-oversight");
   body.innerHTML = `
-    <div class="proto-note"><i data-lucide="sparkles" class="icon"></i><div><b>Zero new nav.</b> This is the existing "Tasks" screen, unchanged &mdash; only the persona list grew a "Test Drive Scheduling" option. DATL/Receptionist oversight fits this shape exactly, because it already <i>is</i> a filterable order queue.</div></div>
+    <div class="proto-note"><i data-lucide="sparkles" class="icon"></i><div><b>Manager-only, zero new nav for anyone else.</b> This is the existing "Tasks" screen, unchanged &mdash; only the persona list grew a "Test Drive Scheduling" option, and only a Manager/DATL sees it in the sidebar. Same underlying orders as Test Drives &mdash; click through to the same detail view.</div></div>
     <div class="list-head"><div><h2>Tasks</h2><div class="sub">Order &middot; Test Drive Scheduling</div></div></div>
     <div class="toolbar">
       <div class="search"><i data-lucide="search" class="icon"></i><input placeholder="Search tasks"></div>
@@ -88,26 +197,34 @@ function renderOversight() {
     <div class="dtable">
       <table>
         <thead><tr><th>Order Id</th><th>Customer</th><th>Car</th><th>Type</th><th>Scheduled slot</th><th>Assigned DA</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          ${OVERSIGHT_ROWS.map(o => `
-            <tr>
-              <td>${o.order}</td>
-              <td><div class="cust"><div class="av">${initials(o.name)}</div><div class="nm">${o.name}</div></div></td>
-              <td>${o.car}</td>
-              <td><span class="chip neutral">${o.type}</span></td>
-              <td>${o.slot}</td>
-              <td>${o.da}</td>
-              <td><span class="chip ${o.tone}">${o.status}</span></td>
-              <td><button class="kebab"><i data-lucide="more-vertical" class="icon"></i></button></td>
-            </tr>`).join("")}
-        </tbody>
+        <tbody id="oversight-rows"></tbody>
       </table>
       <div class="pager"><button><i data-lucide="chevron-left" class="icon"></i></button><button class="cur">1</button><button>2</button><button><i data-lucide="chevron-right" class="icon"></i></button></div>
     </div>`;
+
+  document.getElementById("oversight-rows").innerHTML = ORDERS.map(o => {
+    const da = o.assignedDaId ? findDa(o.assignedDaId) : null;
+    return `
+    <tr data-order="${o.id}">
+      <td>${o.id}</td>
+      <td><div class="cust"><div class="av">${initials(o.customer.name || "New")}</div><div class="nm">${o.customer.name || "New walk-in"}</div></div></td>
+      <td>${o.car ? o.car.title : "&mdash;"}</td>
+      <td><span class="chip neutral">${o.type}</span></td>
+      <td>${o.slot || "&mdash;"}</td>
+      <td>${da ? da.name : "&mdash;"}</td>
+      <td><span class="chip ${o.tone}">${o.status}</span></td>
+      <td><button class="kebab"><i data-lucide="more-vertical" class="icon"></i></button></td>
+    </tr>`;
+  }).join("");
+
+  document.querySelectorAll("#oversight-rows tr[data-order]").forEach(tr => {
+    tr.addEventListener("click", (e) => { if (e.target.closest(".kebab")) return; navigate("detail", tr.dataset.order); });
+  });
+
   icons();
 }
 
-// ---------------------------------------------------------------- Test Drive detail: step flows
+// ================================================================== Test Drive detail: step flows
 
 function stepsFor(order) {
   if (STATE.role === "DA") {
@@ -119,6 +236,7 @@ function stepsFor(order) {
       { key: "done", label: "Token Paid" },
     ];
   }
+  // RECEPTIONIST and MANAGER share the front-desk flow
   if (order.isWalkIn) {
     return [
       { key: "customer", label: "Customer Details" },
@@ -134,21 +252,12 @@ function stepsFor(order) {
   ];
 }
 
-function openOrder(orderId) {
-  STATE.orderId = orderId;
-  const order = findOrder(orderId);
-  STATE.stepIndex = order.stage === "da_conduct" && STATE.role === "DA" ? 0 : 0;
-  setTab("detail");
-}
-
 function renderDetail() {
   const order = findOrder(STATE.orderId) || ORDERS[0];
   STATE.orderId = order.id;
   const steps = stepsFor(order);
   if (STATE.stepIndex >= steps.length) STATE.stepIndex = steps.length - 1;
 
-  document.getElementById("detail-crumb").textContent = order.customer.name || "New walk-in";
-  renderHeaderUser(document.getElementById("header-user-2"));
   renderLeftPane(order);
   renderStepper(steps);
   renderStepBody(order, steps);
@@ -214,7 +323,7 @@ function renderStepBody(order, steps) {
     </div>`;
   document.getElementById("btn-prev").addEventListener("click", () => { if (!isFirst) { STATE.stepIndex--; renderDetail(); } });
   const nextBtn = document.getElementById("btn-next");
-  if (key === "payment") { nextBtn.disabled = true; nextBtn.style.opacity = ".5"; } // payment gates this transition &mdash; use "Mark as paid" instead
+  if (key === "payment") { nextBtn.disabled = true; nextBtn.style.opacity = ".5"; } // payment gates this transition — use "Mark as paid" instead
   else nextBtn.addEventListener("click", () => {
     if (STEP_COMMIT[key]) STEP_COMMIT[key](order);
     if (isLast) { finishFlow(order); return; }
@@ -225,10 +334,11 @@ function renderStepBody(order, steps) {
 }
 
 function finishFlow(order) {
-  if (STATE.role === "DA") { setTab("queue"); return; }
-  if (!order.assignedDaId) { order.status = "Unassigned"; order.tone = "bad"; }
-  else { order.status = "Assigned"; order.tone = "neutral"; }
-  setTab("queue");
+  if (STATE.role !== "DA") {
+    if (!order.assignedDaId) { order.status = "Unassigned"; order.tone = "bad"; }
+    else { order.status = "Assigned"; order.tone = "neutral"; }
+  }
+  navigate("queue");
 }
 
 // ---- per-step render/mount/commit/hint/next-label ----
@@ -449,7 +559,7 @@ function bankHtml() {
   </div>`;
 }
 
-// ---------------------------------------------------------------- Assign DA modal
+// ================================================================== Assign DA modal
 
 function openAssignModal(order) {
   renderDaList(order);
@@ -484,7 +594,7 @@ document.getElementById("modal-assign").addEventListener("click", () => {
   renderDetail();
 });
 
-// ---------------------------------------------------------------- Compare modal
+// ================================================================== Compare modal
 
 function openCompareModal() {
   const cars = STATE.compareIds.map(id => CARS.find(c => c.id === id));
@@ -503,33 +613,6 @@ function openCompareModal() {
 document.getElementById("cmp-close").addEventListener("click", () => document.getElementById("cmp-modal").classList.remove("open"));
 document.getElementById("cmp-close-2").addEventListener("click", () => document.getElementById("cmp-modal").classList.remove("open"));
 
-// ---------------------------------------------------------------- tabs + role toggle
+// ================================================================== boot
 
-function setTab(tab) {
-  STATE.tab = tab;
-  document.querySelectorAll("#tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + tab));
-  if (tab === "queue") { renderHeaderUser(document.getElementById("header-user")); renderQueue(); }
-  if (tab === "detail") { if (!STATE.orderId) STATE.orderId = ORDERS[0].id; renderDetail(); }
-  if (tab === "oversight") { renderHeaderUser(document.getElementById("header-user-3")); renderOversight(); }
-}
-
-document.getElementById("tabbar").addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-tab]");
-  if (btn) setTab(btn.dataset.tab);
-});
-
-document.getElementById("role-toggle").addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-role]");
-  if (!btn) return;
-  STATE.role = btn.dataset.role;
-  document.querySelectorAll("#role-toggle button").forEach(b => b.classList.toggle("active", b === btn));
-  STATE.stepIndex = 0;
-  if (STATE.tab === "queue") renderQueue();
-  if (STATE.tab === "detail") renderDetail();
-});
-
-// ---------------------------------------------------------------- boot
-
-setTab("queue");
-icons();
+renderRoute();
