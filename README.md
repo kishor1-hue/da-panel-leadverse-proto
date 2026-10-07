@@ -34,3 +34,18 @@ Use the "Acting as" toggle (top right of the meta strip) to switch between the t
 ## Why it looks like this
 
 See the **Migration Plan** tab inside the prototype itself — it explains what's a straight reuse of existing Leadverse components (e.g. the Assign-DA modal is Leadverse's existing `ManualAssignmentModal` pattern), what's an extension, and what's genuinely new.
+
+## PISTON v2 screen spec (`piston/`)
+
+The ideal test-drive journey (PISTON: Plan, Introduce, Sign-in, Tailor, On the road, Next step), one level deeper than the FigJam board: for every step its **source**, its **screen**, its **entry conditions** and its **exit conditions**, for three tracks (booked hub TD, walk-in hub TD, video TD). Every screen is built on the same Leadverse shell and components as the Test Drive Console above, and reuses its `style.css`.
+
+```bash
+python3 -m http.server 8000
+# open http://localhost:8000/piston/
+```
+
+- **Walkthrough**: journey rail, the Leadverse screen for the step, and its spec. A screen's buttons are its exits, so clicking one moves to the next step. Deep links look like `#booked-S1`, `#walkin-T2`, `#vtd-O2`.
+- **Blueprint**: the same depth as a table, at flow, phase and step level.
+- **What changed**: the review notes applied (TD consent after TD start; handshake, then car finding), what that does to the Test Drive Console, and the decisions still open.
+
+Files: `piston-data.js` (the spec: tracks, flows, phases, steps, mock people and cars), `piston-screens.js` (one screen per step), `piston.js` (the viewer), `piston.css` (viewer + new screen parts), `artifact-entry.html` (same page for publishing as a Claude artifact).
