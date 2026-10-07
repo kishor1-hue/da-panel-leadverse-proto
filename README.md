@@ -49,3 +49,5 @@ python3 -m http.server 8000
 - **What changed**: the review notes applied (TD consent after TD start; handshake, then car finding), what that does to the Test Drive Console, and the decisions still open.
 
 Files: `piston-data.js` (the spec: tracks, flows, phases, steps, mock people and cars), `piston-screens.js` (one screen per step), `piston.js` (the viewer), `piston.css` (viewer + new screen parts), `artifact-entry.html` (same page for publishing as a Claude artifact).
+
+`board-v2.mmd` is the Mermaid source of the "PISTON v2" diagram on the FigJam board (https://www.figma.com/board/5QB2ojoArxc9QdjqWxuqlx), placed next to v1. Step IDs on the board match the IDs in the screen spec.
