@@ -1,5 +1,6 @@
 <title>Test Drive Console</title>
 <link rel="stylesheet" href="style.css">
+<script src="theme.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.462.0/dist/umd/lucide.js"></script>
 
 <div class="frame-wrap">
@@ -9,9 +10,12 @@
     <div class="lv-main">
       <div class="lv-header">
         <div class="crumb" id="app-crumb"></div>
-        <div class="role-switch" id="role-switch">
-          <button class="role-switch-trigger lv-user" id="role-trigger"></button>
-          <div class="role-dropdown" id="role-dropdown"></div>
+        <div class="lv-header-r">
+          <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch theme"></button>
+          <div class="role-switch" id="role-switch">
+            <button class="role-switch-trigger lv-user" id="role-trigger"></button>
+            <div class="role-dropdown" id="role-dropdown"></div>
+          </div>
         </div>
       </div>
 

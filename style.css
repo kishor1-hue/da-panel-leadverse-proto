@@ -8,9 +8,27 @@
   --shadow-md: 0 10px 30px -12px rgba(15,23,42,.18);
   --note-bg:#FFF8EC; --note-border:#F0C674; --note-ink:#8A6215;
   --radius:12px; --radius-lg:20px;
-  /* Leadverse runs in the white theme only, so there is no dark palette */
+  /* White is the default. Dark applies only when the viewer picks it with the toggle (theme.js),
+     never from the OS setting, so Leadverse always opens white. */
   color-scheme: light;
 }
+:root[data-lv-theme="dark"]{
+  --lv:#7C6CFF; --lv-hover:#8F82FF; --lv-soft:#241F45; --lv-soft-ink:#B8AEFF;
+  --bg:#0E1016; --surface:#171A24; --surface-2:#1D212C; --border:#2B3040;
+  --ink:#E7E9F3; --muted:#9AA3B8; --faint:#6B7386;
+  --ok-bg:#123423; --ok-ink:#4ADE80; --warn-bg:#332711; --warn-ink:#F2C14E;
+  --bad-bg:#3A1A1D; --bad-ink:#F87171; --neutral-bg:#232838; --neutral-ink:#AEB6C7;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+  --shadow-md: 0 20px 45px -15px rgba(0,0,0,.6);
+  --note-bg:#2A2312; --note-border:#5C4A1E; --note-ink:#E4C468;
+  color-scheme: dark;
+}
+
+/* theme toggle (both prototypes) */
+.theme-toggle{display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border-radius:9px; border:1px solid var(--border); background:var(--surface); color:var(--ink); font-size:12px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap;}
+.theme-toggle:hover{background:var(--surface-2);}
+.theme-toggle .icon{width:14px; height:14px;}
+.lv-header-r{display:flex; align-items:center; gap:12px;}
 *{box-sizing:border-box;}
 html,body{margin:0;}
 body{background:var(--bg); color:var(--ink); font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; font-size:14px; -webkit-font-smoothing:antialiased;}

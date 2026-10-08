@@ -53,3 +53,7 @@ python3 -m http.server 8000
 Files: `piston-data.js` (the spec: tracks, flows, phases, steps, mock people and cars), `piston-anatomy.js` (parts, fields, actions and states per screen), `piston-screens.js` (one screen per step), `piston.js` (the viewer), `piston.css` (viewer and the TD Journey components), `artifact-entry.html` (same page for publishing as a Claude artifact).
 
 `board-v2.mmd` is the Mermaid source of the "PISTON v2" diagram on the FigJam board (https://www.figma.com/board/5QB2ojoArxc9QdjqWxuqlx), placed next to v1. Step IDs on the board match the IDs in the screen spec.
+
+## Theme
+
+Both prototypes open in the white theme, which is what Leadverse uses. The Light / Dark button in the header switches the theme for your browser and remembers it (`theme.js`, stored in `localStorage`). The OS dark mode never switches it.
