@@ -37,7 +37,7 @@ See the **Migration Plan** tab inside the prototype itself — it explains what'
 
 ## PISTON v2 screen spec (`piston/`)
 
-The ideal test-drive journey (PISTON: Plan, Introduce, Sign-in, Tailor, On the road, Next step), one level deeper than the FigJam board: for every step its **source**, its **screen**, its **entry conditions** and its **exit conditions**, for three tracks (booked hub TD, walk-in hub TD, video TD). Every screen is built on the same Leadverse shell and components as the Test Drive Console above, and reuses its `style.css`.
+The ideal test-drive journey (PISTON: Plan, Introduce, Sign-in, Tailor, On the road, Next step), one level deeper than the FigJam board: for every step its **source**, its **screen**, its **entry conditions** and its **exit conditions**, for three tracks (booked hub TD, walk-in hub TD, video TD). Screens follow the **Leadverse TD Journey** Figma design (white theme only): icon rail, lead pane with AI summary, stage bar, CarGPT with live transcription. One level further down, every screen has its **anatomy**: numbered parts (pins on the screen), fields, actions and states.
 
 ```bash
 python3 -m http.server 8000
@@ -45,9 +45,11 @@ python3 -m http.server 8000
 ```
 
 - **Walkthrough**: journey rail, the Leadverse screen for the step, and its spec. A screen's buttons are its exits, so clicking one moves to the next step. Deep links look like `#booked-S1`, `#walkin-T2`, `#vtd-O2`.
+- **Anatomy** (tab in the walkthrough): orange pins on the screen, with each part's widget, the fields, the actions and the states.
 - **Blueprint**: the same depth as a table, at flow, phase and step level.
+- **Fields**: every field on every screen in one data dictionary.
 - **What changed**: the review notes applied (TD consent after TD start; handshake, then car finding), what that does to the Test Drive Console, and the decisions still open.
 
-Files: `piston-data.js` (the spec: tracks, flows, phases, steps, mock people and cars), `piston-screens.js` (one screen per step), `piston.js` (the viewer), `piston.css` (viewer + new screen parts), `artifact-entry.html` (same page for publishing as a Claude artifact).
+Files: `piston-data.js` (the spec: tracks, flows, phases, steps, mock people and cars), `piston-anatomy.js` (parts, fields, actions and states per screen), `piston-screens.js` (one screen per step), `piston.js` (the viewer), `piston.css` (viewer and the TD Journey components), `artifact-entry.html` (same page for publishing as a Claude artifact).
 
 `board-v2.mmd` is the Mermaid source of the "PISTON v2" diagram on the FigJam board (https://www.figma.com/board/5QB2ojoArxc9QdjqWxuqlx), placed next to v1. Step IDs on the board match the IDs in the screen spec.
